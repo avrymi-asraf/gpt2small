@@ -1,0 +1,34 @@
+[project]
+name = "transformers-dev"
+version = "0.1.0"
+description = "Transformers development environment with CUDA support"
+requires-python = ">=3.12"
+dependencies = [
+    "torch",
+    "torchvision",
+    "torchaudio",
+    "transformers[torch]",
+    "ipykernel",
+    "jupyterlab",
+    "accelerate",
+]
+
+
+
+[tool.uv]
+index-url = "https://download.pytorch.org/whl/cu126"
+
+
+[tool.uv.sources]
+torch = { index = "pytorch" }
+torchvision = { index = "pytorch" }
+torchaudio = { index = "pytorch" }
+
+[[tool.uv.index]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
