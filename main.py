@@ -19,7 +19,7 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
-        torch_dtype=torch.float32 if device == "cpu" else torch.float16,
+        dtype=torch.float32 if device == "cpu" else torch.float16,
     )
     model = model.to(device)
     model.eval()

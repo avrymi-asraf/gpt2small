@@ -1,0 +1,3 @@
+FROM using-uv:latest
+
+CMD ["bash"]
