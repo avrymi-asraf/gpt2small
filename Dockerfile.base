@@ -13,7 +13,7 @@ RUN apt update && apt install -y \
     ffmpeg \
     curl \
     build-essential \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf  /var/lib/apt/lists/*
 
 # Install uv
 # We will explicitly tell the install script to install uv into /usr/local/bin,

@@ -2,15 +2,15 @@
 name = "transformers-dev"
 version = "0.1.0"
 description = "Transformers development environment with CUDA support"
-requires-python = "3.12"
+requires-python = ">=3.12"
 dependencies = [
     "torch",
     "torchvision",
     "torchaudio",
-    "transformers[torch]",
     "ipykernel",
     "jupyterlab",
     "accelerate",
+    "matplotlib"
 ]
 
 

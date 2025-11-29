@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<!--
+    GPT-2 Small Architecture Visualization
+    ======================================
+
+    This file generates an interactive visualization of the GPT-2 Small neural network architecture.
+    It is designed to be a self-contained educational tool for developers and researchers.
+
+    VISUALIZATION ELEMENTS & HOW THEY WORK:
+    ---------------------------------------
+    1.  **The Flow Container (`.flow-container`)**:
+        - This is the main vertical column that holds all the processing stages.
+        - Data flows from top (Input) to bottom (Output).
+
+    2.  **Stages (`.stage`)**:
+        - Each gray box represents a distinct processing step in the model (e.g., "Tokenizer", "Embedding").
+        - **Header**: Contains the name of the step and the output tensor shape.
+        - **Content**: A brief description or interactive elements (formulas).
+
+    3.  **Tensor Shape Badges (`.shape-badge`)**:
+        - The pink/purple pill-shaped badges (e.g., `[Seq, 768]`) display the dimensions of the data matrix at that specific point.
+        - `Seq`: Sequence length (number of tokens).
+        - `768`: The hidden dimension size of GPT-2 Small.
+
+    4.  **Transformer Blocks (Dynamic Generation)**:
+        - The 12 repeating Transformer layers are NOT hardcoded in HTML.
+        - They are generated via a JavaScript loop (`const numLayers = 12`) at the bottom of the file.
+        - Each block uses the HTML `<details>` and `<summary>` elements to create an accordion effect (expand/collapse).
+
+    5.  **Formulas (`.formula-box`)**:
+        - Hidden by default. Toggled via the "Formula" buttons.
+        - Contains LaTeX math strings (e.g., `E = E_{token} + E_{pos}`).
+        - Rendered into beautiful math notation by the **KaTeX** library upon page load.
+
+    6.  **Arrows (`.arrow-down`)**:
+        - Visual connectors that indicate the direction of data flow between stages.
+
+    HOW TO EDIT:
+    ------------
+    - To change the **Model Architecture** (e.g., to GPT-2 Medium): Update the numbers in the `.shape-badge` spans and the `numLayers` variable in the script.
+    - To change the **Visual Style**: Edit the CSS variables in the `<style>` block (e.g., `--accent-color`).
+    - To add **New Steps**: Insert new `.stage` divs directly into the HTML body or the JS loop.
+-->
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPT-2 Small Architecture Visualization</title>
+    <style>
+        :root {
+            --bg-color: #1e1e1e;
+            --text-color: #e0e0e0;
+            --accent-color: #4caf50;
+            --box-bg: #2d2d2d;
+            --box-border: #404040;
+            --highlight: #61dafb;
+            --shape-color: #ff79c6;
+            --arrow-color: #666;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: var(--highlight);
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #888;
+            margin-bottom: 40px;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        .flow-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 800px;
+            position: relative;
+        }
+
+        .stage {
+            background-color: var(--box-bg);
+            border: 1px solid var(--box-border);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            width: 100%;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            position: relative;
+            transition: transform 0.2s;
+        }
+
+        .stage:hover {
+            border-color: var(--highlight);
+        }
+
+        .stage-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .shape-badge {
+            background-color: #333;
+            color: var(--shape-color);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9em;
+            border: 1px solid var(--shape-color);
+        }
+
+        .arrow-down {
+            width: 0;
+            height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-top: 10px solid var(--arrow-color);
+            margin: 0 auto;
+        }
+
+        .line-down {
+            width: 2px;
+            height: 20px;
+            background-color: var(--arrow-color);
+            margin: 0 auto;
+        }
+
+        /* Formula Box Styles */
+        .formula-box {
+            display: none;
+            background-color: #252526;
+            border: 1px solid var(--highlight);
+            border-radius: 5px;
+            padding: 10px;
+            margin-top: 10px;
+            text-align: center;
+            font-size: 0.9em;
+            color: #ccc;
+        }
+
+        .formula-box.visible {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .math-inline {
+            font-family: 'Times New Roman', Times, serif;
+            font-style: italic;
+            font-size: 1.2em;
+            color: var(--text-color);
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        /* Accordion Styles */
+        details {
+            width: 100%;
+        }
+
+        summary {
+            cursor: pointer;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background-color: #252526;
+            border-radius: 5px;
+            margin-bottom: 5px;
+        }
+
+        summary::-webkit-details-marker {
+            display: none;
+        }
+
+        summary:hover {
+            background-color: #333;
+        }
+
+        summary::after {
+            content: '+';
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        details[open] summary::after {
+            content: '-';
+        }
+
+        .layer-content {
+            padding: 15px;
+            background-color: #1e1e1e;
+            border-radius: 0 0 5px 5px;
+            border: 1px solid #333;
+            border-top: none;
+        }
+
+        .sub-stage {
+            background-color: #2d2d2d;
+            border: 1px dashed #555;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .formula-btn {
+            background-color: transparent;
+            border: 1px solid var(--highlight);
+            color: var(--highlight);
+            padding: 2px 8px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+
+        .formula-btn:hover {
+            background-color: var(--highlight);
+            color: #000;
+        }
+
+        /* Modal for Formulas - REMOVED */
+
+        .residual-connection {
+            position: absolute;
+            right: -20px;
+            top: 50%;
+            width: 20px;
+            height: 100%;
+            border-right: 2px solid #666;
+            border-top: 2px solid #666;
+            border-bottom: 2px solid #666;
+            border-radius: 0 10px 10px 0;
+            pointer-events: none;
+        }
+
+        .residual-label {
+            position: absolute;
+            right: -80px;
+            top: 50%;
+            transform: translateY(-50%) rotate(90deg);
+            font-size: 0.7em;
+            color: #666;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"
+        integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"
+        integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8"
+        crossorigin="anonymous"></script>
+</head>
+
+<body>
+
+    <h1>GPT-2 Small Architecture</h1>
+    <div class="subtitle">A step-by-step visualization of the data flow through the 124M parameter model.</div>
+
+    <div
+        style="background: #252526; padding: 15px; border-radius: 8px; margin-bottom: 30px; font-size: 0.9em; border: 1px solid #404040; max-width: 800px; width: 100%; box-sizing: border-box;">
+        <strong style="color: var(--highlight); display: block; margin-bottom: 10px;">Tensor Dimensions Legend
+            (Activations):</strong>
+        <div
+            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; color: #ccc;">
+            <div><span style="color: var(--shape-color)">Seq</span>: Sequence Length (number of tokens)</div>
+            <div><span style="color: var(--shape-color)">768</span>: Hidden Dimension (Embedding Size)</div>
+            <div><span style="color: var(--shape-color)">3072</span>: MLP Expansion Size (4 × 768)</div>
+            <div><span style="color: var(--shape-color)">50257</span>: Vocabulary Size</div>
+            <div><span style="color: var(--shape-color)">12</span>: Attention Heads</div>
+        </div>
+    </div>
+
+    <div class="flow-container" id="main-flow">
+        <!-- Input Stage -->
+        <div class="stage">
+            <div class="stage-header">
+                <span>Input Text</span>
+                <span class="shape-badge">String</span>
+            </div>
+            <div style="margin-top: 5px; color: #aaa; font-size: 0.9em;">"The quick brown fox..."</div>
+        </div>
+
+        <div class="line-down"></div>
+        <div class="arrow-down"></div>
+
+        <div class="stage">
+            <div class="stage-header">
+                <span>Tokenizer (BPE)</span>
+                <span class="shape-badge">[Seq]</span>
+            </div>
+            <div style="margin-top: 5px; color: #aaa; font-size: 0.9em;">Converts text to token IDs (Vocab: 50,257)
+            </div>
+        </div>
+
+        <div class="line-down"></div>
+        <div class="arrow-down"></div>
+
+        <div class="stage">
+            <div class="stage-header">
+                <span>Embedding Layer</span>
+                <span class="shape-badge">[Seq, 768]</span>
+            </div>
+            <div style="margin-top: 5px; color: #aaa; font-size: 0.9em;">
+                Token Embeddings + Position Embeddings
+                <button class="formula-btn" onclick="toggleFormula('embedding-formula')">Formula</button>
+                <div id="embedding-formula" class="formula-box">
+                    <span class="math-inline">E = E_{token} + E_{pos}</span>
+                    <div>GPT-2 adds learned positional embeddings to the token embeddings to retain sequence order
+                        information.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="line-down"></div>
+        <div class="arrow-down"></div>
+
+        <!-- Transformer Stack Container -->
+        <div id="transformer-stack" style="width: 100%;">
+            <!-- Layers will be injected here by JS -->
+        </div>
+
+        <!-- Output Stage -->
+        <div class="stage">
+            <div class="stage-header">
+                <span>Final Layer Norm</span>
+                <span class="shape-badge">[Seq, 768]</span>
+            </div>
+        </div>
+
+        <div class="line-down"></div>
+        <div class="arrow-down"></div>
+
+        <div class="stage">
+            <div class="stage-header">
+                <span>Unembedding (LM Head)</span>
+                <span class="shape-badge">[Seq, 50257]</span>
+            </div>
+            <div style="margin-top: 5px; color: #aaa; font-size: 0.9em;">Projects hidden states to vocabulary logits
+            </div>
+        </div>
+
+        <div class="line-down"></div>
+        <div class="arrow-down"></div>
+
+        <div class="stage">
+            <div class="stage-header">
+                <span>Softmax</span>
+                <span class="shape-badge">[Seq, 50257]</span>
+            </div>
+            <div style="margin-top: 5px; color: #aaa; font-size: 0.9em;">
+                Converts logits to probabilities
+                <button class="formula-btn" onclick="toggleFormula('softmax-formula')">Formula</button>
+                <div id="softmax-formula" class="formula-box">
+                    <span class="math-inline">P(x_i) = \frac{e^{x_i}}{\sum_{j} e^{x_j}}</span>
+                    <div>Converts the raw output logits into a probability distribution over the vocabulary.</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal Removed -->
+
+    <script>
+        // Formula Toggle Function
+        function toggleFormula(id) {
+            const box = document.getElementById(id);
+            if (box.classList.contains('visible')) {
+                box.classList.remove('visible');
+            } else {
+                box.classList.add('visible');
+            }
+        }
+
+        // Generate Transformer Layers
+        const stackContainer = document.getElementById('transformer-stack');
+        const numLayers = 12;
+
+        for (let i = 0; i < numLayers; i++) {
+            const layerDiv = document.createElement('div');
+            layerDiv.className = 'stage';
+            layerDiv.style.padding = '0'; // Reset padding for accordion
+
+            // HTML for the layer
+            layerDiv.innerHTML = `
+                <details ${i === 0 || i === 11 ? 'open' : ''}>
+                    <summary>
+                        <span>Transformer Block ${i}</span>
+                        <span class="shape-badge">[Seq, 768]</span>
+                    </summary>
+                    <div class="layer-content">
+                        
+                        <!-- Layer Norm 1 -->
+                        <div class="sub-stage" style="flex-direction: column; align-items: stretch;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>Layer Norm 1</span>
+                                <div>
+                                    <button class="formula-btn" onclick="toggleFormula('ln1-${i}')">Formula</button>
+                                    <span class="shape-badge">[Seq, 768]</span>
+                                </div>
+                            </div>
+                            <div id="ln1-${i}" class="formula-box">
+                                <span class="math-inline">LN(x) = \\frac{x - \\mu}{\\sigma} \\cdot \\gamma + \\beta</span>
+                                <div>Normalizes the inputs across the feature dimension to stabilize training.</div>
+                            </div>
+                        </div>
+                        <div class="arrow-down" style="margin: 0 auto;"></div>
+
+                        <!-- Attention -->
+                        <div class="sub-stage" style="border-color: var(--highlight); flex-direction: column; align-items: stretch;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>Masked Self-Attention (12 Heads)</span>
+                                <div>
+                                    <button class="formula-btn" onclick="toggleFormula('attn-${i}')">Formula</button>
+                                    <span class="shape-badge">[Seq, 768]</span>
+                                </div>
+                            </div>
+                            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #444; font-size: 0.85em; color: #aaa;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                    <span>Q, K, V Projections:</span>
+                                    <span class="shape-badge" style="font-size: 0.85em; padding: 1px 5px;">[Seq, 768]</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                    <span>Split Heads:</span>
+                                    <span class="shape-badge" style="font-size: 0.85em; padding: 1px 5px;">[12, Seq, 64]</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span>Attention Matrix:</span>
+                                    <span class="shape-badge" style="font-size: 0.85em; padding: 1px 5px;">[12, Seq, Seq]</span>
+                                </div>
+                            </div>
+                            <div id="attn-${i}" class="formula-box">
+                                <span class="math-inline">Attention(Q, K, V) = softmax(\\frac{QK^T}{\\sqrt{d_k}})V</span>
+                                <div>The core mechanism. Queries (Q) and Keys (K) interact to determine attention scores, which weight the Values (V). Scaled by the square root of the head dimension (64).</div>
+                            </div>
+                        </div>
+                        <div class="arrow-down" style="margin: 0 auto;"></div>
+
+                        <!-- Residual 1 -->
+                        <div style="text-align: center; color: #888; font-size: 0.8em; margin: 5px;">+ Residual Connection <span class="shape-badge" style="font-size: 0.8em; border: none; background: none;">[Seq, 768]</span></div>
+                        <div class="arrow-down" style="margin: 0 auto;"></div>
+
+                        <!-- Layer Norm 2 -->
+                        <div class="sub-stage">
+                            <span>Layer Norm 2</span>
+                            <span class="shape-badge">[Seq, 768]</span>
+                        </div>
+                        <div class="arrow-down" style="margin: 0 auto;"></div>
+
+                        <!-- MLP -->
+                        <div class="sub-stage" style="flex-direction: column; align-items: stretch;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>Feed Forward (MLP)</span>
+                                <div>
+                                    <button class="formula-btn" onclick="toggleFormula('mlp-${i}')">Formula</button>
+                                    <span class="shape-badge">[Seq, 768]</span>
+                                </div>
+                            </div>
+                            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #444; font-size: 0.85em; color: #aaa;">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span>Internal Expansion:</span>
+                                    <span class="shape-badge" style="font-size: 0.85em; padding: 1px 5px;">[Seq, 3072]</span>
+                                </div>
+                            </div>
+                            <div id="mlp-${i}" class="formula-box">
+                                <span class="math-inline">FFN(x) = GELU(xW_1 + b_1)W_2 + b_2</span>
+                                <div>A two-layer perceptron that processes each token position independently. Projects up to 4x (3072) and back down.</div>
+                            </div>
+                        </div>
+                        <div class="arrow-down" style="margin: 0 auto;"></div>
+
+                        <!-- Residual 2 -->
+                        <div style="text-align: center; color: #888; font-size: 0.8em; margin: 5px;">+ Residual Connection <span class="shape-badge" style="font-size: 0.8em; border: none; background: none;">[Seq, 768]</span></div>
+
+                    </div>
+                </details>
+            `;
+
+            stackContainer.appendChild(layerDiv);
+
+            // Add connecting arrow between layers (except after the last one)
+            if (i < numLayers) {
+                const arrow = document.createElement('div');
+                arrow.className = 'arrow-down';
+                const line = document.createElement('div');
+                line.className = 'line-down';
+
+                stackContainer.appendChild(line);
+                stackContainer.appendChild(arrow);
+            }
+        }
+
+        // Render Math using KaTeX
+        document.addEventListener("DOMContentLoaded", function () {
+            const mathElements = document.querySelectorAll('.math-inline');
+            mathElements.forEach(el => {
+                try {
+                    katex.render(el.textContent, el, {
+                        throwOnError: false,
+                        displayMode: true
+                    });
+                } catch (e) {
+                    console.error("KaTeX rendering error:", e);
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

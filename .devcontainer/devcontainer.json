@@ -24,7 +24,8 @@
 			"extensions": [
 				"ms-python.python",
 				"ms-toolsai.jupyter",
-				"ms-python.black-formatter"
+				"ms-python.black-formatter",
+				"s-azuretools.vscode-containers"
 			]
 		}
 	}
