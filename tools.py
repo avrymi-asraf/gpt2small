@@ -384,7 +384,8 @@ def plot_activations(
     for ax, (layer_name, act) in zip(axes, activations.items()):
         # act shape: [batch, seq_len, hidden_dim]
         # Take first batch and plot as heatmap
-        act_2d = act[0].numpy()  # [seq_len, hidden_dim]
+        # Move to CPU if needed (activations stored by ActivationExtractor are already on CPU)
+        act_2d = act[0].detach().cpu().numpy()  # [seq_len, hidden_dim]
 
         im = ax.imshow(act_2d, aspect="auto", cmap="viridis")
         ax.set_title(layer_name)
