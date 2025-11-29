@@ -334,3 +334,125 @@ class ActivationExtractor:
         # Re-register hooks for the (possibly) new layer list
         self.register_hooks(force=True)
         return meta
+
+    def get_activation_stats(
+        self, activations: Dict[str, torch.Tensor]
+    ) -> Dict[str, Dict[str, float]]:
+        """Compute statistics for activation tensors.
+
+        Args:
+            activations: Dictionary mapping layer names to activation tensors.
+
+        Returns:
+            Dictionary mapping layer names to statistics (mean, std, min, max).
+        """
+        stats = {}
+        for layer_name, act in activations.items():
+            act_flat = act.flatten().float()
+            stats[layer_name] = {
+                "mean": act_flat.mean().item(),
+                "std": act_flat.std().item(),
+                "min": act_flat.min().item(),
+                "max": act_flat.max().item(),
+            }
+        return stats
+
+
+def plot_activations(
+    activations: Dict[str, torch.Tensor],
+    tokens: List[str],
+    figsize: tuple = (12, 6),
+) -> "matplotlib.figure.Figure":
+    """Plot activation heatmaps for extracted layers.
+
+    Args:
+        activations: Dictionary mapping layer names to activation tensors.
+        tokens: List of tokens corresponding to the input.
+        figsize: Figure size (width, height).
+
+    Returns:
+        Matplotlib figure with activation heatmaps.
+    """
+    import matplotlib.pyplot as plt
+
+    num_layers = len(activations)
+    fig, axes = plt.subplots(1, num_layers, figsize=figsize)
+
+    if num_layers == 1:
+        axes = [axes]
+
+    for ax, (layer_name, act) in zip(axes, activations.items()):
+        # act shape: [batch, seq_len, hidden_dim]
+        # Take first batch and plot as heatmap
+        act_2d = act[0].numpy()  # [seq_len, hidden_dim]
+
+        im = ax.imshow(act_2d, aspect="auto", cmap="viridis")
+        ax.set_title(layer_name)
+        ax.set_xlabel("Hidden Dimension")
+        ax.set_ylabel("Token Position")
+        ax.set_yticks(range(len(tokens)))
+        ax.set_yticklabels(tokens)
+        plt.colorbar(im, ax=ax)
+
+    plt.tight_layout()
+    return fig
+
+
+def plot_activation_stats(
+    activation_history: List[Dict[str, torch.Tensor]],
+    generated_tokens: List[str],
+    figsize: tuple = (12, 6),
+) -> "matplotlib.figure.Figure":
+    """Plot activation statistics over generation steps.
+
+    Args:
+        activation_history: List of activation dicts from generate().
+        generated_tokens: List of generated tokens.
+        figsize: Figure size (width, height).
+
+    Returns:
+        Matplotlib figure with activation statistics over time.
+    """
+    import matplotlib.pyplot as plt
+
+    if not activation_history:
+        raise ValueError("Empty activation history")
+
+    layer_names = list(activation_history[0].keys())
+    num_steps = len(activation_history)
+
+    fig, axes = plt.subplots(2, 1, figsize=figsize, sharex=True)
+
+    for layer_name in layer_names:
+        means = []
+        stds = []
+        for step_acts in activation_history:
+            act = step_acts[layer_name]
+            # Get last token's activation
+            last_act = act[0, -1, :].float()
+            means.append(last_act.mean().item())
+            stds.append(last_act.std().item())
+
+        steps = range(num_steps)
+        axes[0].plot(steps, means, marker="o", label=layer_name)
+        axes[1].plot(steps, stds, marker="o", label=layer_name)
+
+    axes[0].set_ylabel("Mean Activation")
+    axes[0].set_title("Activation Mean Over Generation Steps")
+    axes[0].legend()
+    axes[0].grid(True, alpha=0.3)
+
+    axes[1].set_ylabel("Std Activation")
+    axes[1].set_xlabel("Generation Step")
+    axes[1].set_title("Activation Std Over Generation Steps")
+    axes[1].legend()
+    axes[1].grid(True, alpha=0.3)
+
+    # Add token labels
+    if generated_tokens:
+        tick_labels = [f"{i}: {t}" for i, t in enumerate(generated_tokens)]
+        axes[1].set_xticks(range(len(tick_labels)))
+        axes[1].set_xticklabels(tick_labels, rotation=45, ha="right")
+
+    plt.tight_layout()
+    return fig
