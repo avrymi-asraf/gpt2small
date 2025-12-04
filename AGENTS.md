@@ -13,6 +13,8 @@
     3.  **Extraction:** The `extract` method is called with a text prompt. This registers PyTorch forward hooks on the target layers.
     4.  **Execution:** The model performs a forward pass on the tokenized input. The hooks capture the output tensors (activations) of the specified layers.
     5.  **Cleanup & Output:** Hooks are removed to prevent memory leaks. The captured activations and corresponding tokens are returned to the caller (e.g., the interactive notebook or calling script) for display or analysis.
+    6.  **SAE Training (optional):** The `sae/train.py` module can train a Sparse Autoencoder on collected activations to learn interpretable features.
+    7.  **SAE Analysis:** Use `sae/visualize.py` to analyze which learned features activate for specific inputs.
 
 ---
 
@@ -20,17 +22,29 @@
 
 ```
 /workspaces/gpt2small
-├── Interface.ipynb   # Interactive notebook used as the primary interface for activation extraction
-├── tools.py          # Contains the ActivationExtractor class and utility logic
-├── pyproject.toml    # Project configuration and dependency definitions (using uv)
-├── Dockerfile.dev    # Docker configuration for the development environment
-├── Dockerfile.base   # Base Docker image configuration
-├── README.md         # Project documentation
-└── todo              # Project todo list
+├── Interface.ipynb       # Interactive notebook used as the primary interface
+├── ActivationExtractor.py  # Contains the ActivationExtractor class
+├── pyproject.toml        # Project configuration and dependency definitions (using uv)
+├── Dockerfile.dev        # Docker configuration for the development environment
+├── Dockerfile.base       # Base Docker image configuration
+├── README.md             # Project documentation
+├── sae/                  # Sparse Autoencoder module for interpretability
+│   ├── __init__.py       # Package exports
+│   ├── model.py          # SparseAutoencoder(nn.Module) - ReLU SAE with 8x expansion
+│   ├── buffer.py         # ActivationBuffer - streams activations from HuggingFace datasets
+│   ├── train.py          # train_sae() - training loop with MSE + L1 loss
+│   └── visualize.py      # analyze_word(), compare_reconstruction() for visualization
+├── sae_checkpoints/      # Saved SAE model checkpoints
+└── todo                  # Project todo list
 ```
 
-* `Interface.ipynb`: The primary, interactive interface that orchestrates model initialization and visualization; intended for experimentation and activation visualization. Legacy demo scripts (e.g., `demo_activations.py`) have been removed — please use the notebook or `tools.py` for programmatic access.
-* `tools.py`: A utility module defining the `ActivationExtractor` class, which handles the low-level PyTorch hooks.
+* `Interface.ipynb`: The primary, interactive interface for experimentation and activation visualization.
+* `ActivationExtractor.py`: Utility module defining the `ActivationExtractor` class for PyTorch hooks.
+* `sae/`: Sparse Autoencoder module for training SAEs on GPT-2 activations:
+  - `model.py`: Defines `SparseAutoencoder` with encode/decode for learning interpretable features.
+  - `buffer.py`: Streams activations from WikiText/OpenWebText datasets, buffers on GPU.
+  - `train.py`: Training loop with MSE reconstruction + L1 sparsity loss.
+  - `visualize.py`: Functions to analyze SAE feature activations and reconstruction quality.
 * `pyproject.toml`: Defines the Python dependencies and project metadata.
 
 ---

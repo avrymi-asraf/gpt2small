@@ -1,12 +1,14 @@
 # GPT2SMALL
 
-A tool for extracting, visualizing, and generating text with GPT-2 model activations.
+A tool for extracting, visualizing, and generating text with GPT-2 model activations, with support for training Sparse Autoencoders (SAEs) on layer activations.
 
 ## Features
 
 - **Activation Extraction**: Capture and analyze internal layer activations during model forward passes
 - **Text Generation**: Generate text continuations with various sampling strategies (greedy, temperature, top-k, top-p)
 - **Generation with Activations**: Collect activations during generation to see how internal states evolve token-by-token
+- **Sparse Autoencoder (SAE)**: Train SAEs on layer activations to learn interpretable features
+- **SAE Visualization**: Analyze which SAE features activate for specific words
 - **Interactive Notebook**: Explore model behavior through Jupyter notebooks
 - **Persistent Hooks**: Efficient activation extraction with reusable forward hooks
 
@@ -29,11 +31,18 @@ A tool for extracting, visualizing, and generating text with GPT-2 model activat
 
 ```
 /workspaces/gpt2small
-├── Interface.ipynb      # Interactive notebook for exploration
-├── tools.py             # ActivationExtractor class with extract() and generate()
-├── pyproject.toml       # Dependencies (uv-managed)
-├── Dockerfile.dev       # Development container configuration
-└── README.md            # This file
+├── Interface.ipynb         # Interactive notebook for exploration
+├── ActivationExtractor.py  # ActivationExtractor class with extract() and generate()
+├── pyproject.toml          # Dependencies (uv-managed)
+├── Dockerfile.dev          # Development container configuration
+├── sae/                    # Sparse Autoencoder module
+│   ├── __init__.py         # Package exports
+│   ├── model.py            # SparseAutoencoder neural network
+│   ├── buffer.py           # ActivationBuffer for streaming training data
+│   ├── train.py            # train_sae() training function
+│   └── visualize.py        # analyze_word(), compare_reconstruction()
+├── sae_checkpoints/        # Saved SAE model checkpoints
+└── README.md               # This file
 ```
 
 ## Usage
@@ -101,6 +110,43 @@ for step, (token, activations) in enumerate(zip(result["generated_tokens"], resu
 - `top_p`: Nucleus sampling - sample from smallest set with cumulative prob > p (optional)
 - `do_sample`: Use sampling vs. greedy decoding (default: True)
 - `eos_token_id`: Stop generation at this token (optional)
+
+### Sparse Autoencoder Training
+
+```python
+# Train SAE on layer 6 activations
+from sae.train import train_sae
+
+sae = train_sae(
+    layer_name="transformer.h.6",
+    epochs=3,
+    lr=1e-4,
+    l1_coef=1e-3,
+    dataset_name="wikitext"
+)
+```
+
+### SAE Feature Analysis
+
+```python
+from sae.visualize import analyze_word, compare_reconstruction
+
+# See which SAE features activate for a word
+analyze_word("king", sae, "transformer.h.6", top_k=10)
+
+# Compare original vs reconstructed activations
+compare_reconstruction("The cat sat on the mat", sae, "transformer.h.6")
+```
+
+### SAE Parameters
+
+- `layer_name`: Target transformer block (e.g., "transformer.h.6")
+- `epochs`: Number of training passes through buffer (default: 3)
+- `lr`: Learning rate (default: 1e-4)
+- `l1_coef`: L1 sparsity coefficient (default: 1e-3)
+- `dataset_name`: HuggingFace dataset ("wikitext", "openwebtext")
+- `buffer_size`: Activation vectors to buffer (default: 100K)
+- `expansion`: SAE hidden dimension multiplier (default: 8 → 6144 features)
 
 ### Running Examples
 

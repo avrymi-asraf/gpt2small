@@ -1,5 +1,5 @@
 [project]
-name = "transformers-dev"
+name = "gpt2small"
 version = "0.1.0"
 description = "Transformers development environment with CUDA support"
 requires-python = ">=3.12"
@@ -10,7 +10,9 @@ dependencies = [
     "ipykernel",
     "jupyterlab",
     "accelerate",
-    "matplotlib"
+    "matplotlib",
+    "datasets",
+    "tqdm",
 ]
 
 
