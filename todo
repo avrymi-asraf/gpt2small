@@ -1,9 +1,0 @@
-[x] Visualize the activation of the model.
-    - Added plot_activations() function for heatmap visualization
-    - Added plot_activation_stats() for generation step analysis
-    - Added get_activation_stats() method for statistics
-[x] Understand the ways to read what happened in the model
-    - ActivationExtractor.extract() for single pass activations
-    - ActivationExtractor.generate() with activation history
-    - get_activation_stats() for mean/std/min/max analysis
-[ ] Think about an interesting test to check what happens in the LLM, maybe write something on it.
