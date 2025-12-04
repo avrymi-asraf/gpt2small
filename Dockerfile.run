@@ -1,0 +1,5 @@
+FROM gpt2small-base:latest
+WORKDIR app
+COPY ./ app/
+RUN uv sync
+CMD ["bash"]

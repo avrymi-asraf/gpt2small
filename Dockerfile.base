@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.6.0-cudnn-devel-ubuntu20.04
+FROM nvidia/cuda:13.0.2-cudnn-runtime-ubuntu24.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -15,53 +15,5 @@ RUN apt update && apt install -y \
     build-essential \
     && rm -rf  /var/lib/apt/lists/*
 
-# Install uv
-# We will explicitly tell the install script to install uv into /usr/local/bin,
-# which is guaranteed to be in the PATH.
-RUN UV_INSTALL_DIR=/usr/local/bin sh -c "$(curl -LsSf https://astral.sh/uv/install.sh)"
 
-# Set up working directory
-WORKDIR /workspace
-
-# Copy pyproject.toml to workspace
-COPY pyproject.toml /workspace/
-
-# Create virtual environment and sync dependencies
-# This command will now find `uv` in the PATH.
-# This command will now find `uv` in /usr/local/bin
-WORKDIR /workspace
-RUN uv venv
-
-# You likely want to install the dependencies from your pyproject.toml as well
-# If so, uncomment the following line:
-RUN uv sync
-
-# Clone transformers repository
-ARG REF=main
-RUN git clone https://github.com/huggingface/transformers && \
-    cd transformers && \
-    git checkout $REF
-
-# Install transformers in editable mode
-# We must first activate the virtual environment to install into it.
-# Note: We use `uv pip install` which is the equivalent of `pip install`
-RUN . .venv/bin/activate && \
-    uv pip install -e /workspace/transformers
-
-# Set up environment variables so all future commands
-# automatically use the virtual environment's python and packages.
-ENV VIRTUAL_ENV=/workspace/.venv
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-# Cleaned up PYTHONPATH to avoid the linter warning.
-ENV PYTHONPATH="/workspace/transformers"
-
-WORKDIR /workspace
-
-ARG MODEL_NAME=gpt2
-
-# Run a Python command to download and cache the model and tokenizer
-# This will now use the Python from the virtual env due to the ENV vars set above
-RUN python3 -c "from transformers import AutoTokenizer, AutoModel; \
-    print(f'Downloading and caching model: ${MODEL_NAME}'); \
-    AutoTokenizer.from_pretrained('${MODEL_NAME}'); \
-    AutoModel.from_pretrained('${MODEL_NAME}')"
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
