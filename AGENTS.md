@@ -4,6 +4,162 @@
 
 ---
 
+## Build, Lint, and Test Commands
+
+### Package Management (uv)
+```bash
+# Install dependencies
+uv sync
+
+# Add a new dependency
+uv add <package>
+
+# Remove a dependency
+uv remove <package>
+
+# Run with specific Python (if needed)
+uv run python <script.py>
+```
+
+### Running the Application
+```bash
+# Local development with Jupyter
+uv sync
+jupyter lab Interface.ipynb
+
+# Docker (recommended for GPU/consistency)
+docker build -f Dockerfile.dev -t gpt2small:dev .
+docker run --gpus all --rm -it -p 8888:8888 \
+  -v "$PWD":/workspaces/gpt2small gpt2small:dev \
+  jupyter lab --ip=0.0.0.0 --no-browser --allow-root
+```
+
+### Testing
+This project does not currently have a test suite. When adding tests, use `pytest`:
+```bash
+# Run all tests
+pytest
+
+# Run a single test file
+pytest tests/test_model.py
+
+# Run a single test function
+pytest tests/test_model.py::test_sparse_autoencoder_encode
+
+# Run with verbose output
+pytest -v
+
+# Run tests matching a pattern
+pytest -k "test_encode"
+```
+
+### Linting and Type Checking
+```bash
+# Ruff (linter + formatter)
+ruff check .
+ruff format .
+
+# Pyright (static type checker)
+pyright .
+
+# Run all checks
+ruff check . && ruff format --check . && pyright .
+```
+
+---
+
+## Code Style Guidelines
+
+### General Rules
+- **No comments** in code (unless explicitly required)
+- **No docstrings** in code (unless explicitly required)
+- Keep lines under 100 characters when practical
+- Use 4 spaces for indentation (not tabs)
+
+### Imports
+Organize imports in the following order (separate with blank lines):
+1. Standard library (`os`, `json`, `torch`, etc.)
+2. Third-party libraries (`transformers`, `matplotlib`, `datasets`)
+3. Local project imports (relative imports like `from sae.model import ...`)
+
+```python
+# Good
+import os
+import torch
+from typing import List, Dict, Optional
+
+from transformers import AutoTokenizer, AutoModelForCausalLM
+import matplotlib.pyplot as plt
+
+from sae.model import SparseAutoencoder
+from sae.buffer import ActivationBuffer
+```
+
+### Naming Conventions
+- **Classes**: PascalCase (e.g., `SparseAutoencoder`, `ActivationExtractor`)
+- **Functions/variables**: snake_case (e.g., `train_sae`, `layer_name`)
+- **Constants**: SCREAMING_SNAKE_CASE (e.g., `BUFFER_SIZE`)
+- **Private methods**: leading underscore (e.g., `_init_weights`)
+
+### Type Hints
+- Use type hints for all function parameters and return types
+- Use `Optional[X]` instead of `X | None` for compatibility
+- Use built-in collection types (`list`, `dict`, `tuple`) not capitalized
+
+```python
+# Good
+def train_sae(
+    layer_name: str,
+    epochs: int = 3,
+    lr: float = 1e-4,
+    save_path: Optional[str] = None,
+) -> SparseAutoencoder:
+    ...
+
+# Avoid
+def train_sae(layer_name, epochs=3, lr=1e-4, save_path=None):
+    ...
+```
+
+### Error Handling
+- Use specific exception types
+- Include informative error messages
+- Handle exceptions at the appropriate level
+
+```python
+# Good
+if not os.path.exists(meta_file):
+    return None
+with open(meta_file, "r", encoding="utf-8") as fp:
+    meta = json.load(fp)
+
+# Avoid bare except
+```
+
+### PyTorch Conventions
+- Use `super().__init__()` for parent class initialization
+- Use `torch.no_grad()` for inference
+- Move tensors to device explicitly: `.to(device)`
+- Use `torch.nn.Module` as base for models
+- Detach before CPU transfer: `.detach().cpu()`
+
+### File Headers (Mandatory)
+Every code file must include a header describing its role in the project architecture and code flow:
+
+```python
+"""
+sae/model.py
+
+Role: Defines the SparseAutoencoder neural network module used for learning
+interpretable features from GPT-2 layer activations. This is the core model
+component of the SAE pipeline, providing encode/decode functionality with ReLU
+activation for sparsity. Designed to work with 768-dim GPT-2 hidden states and
+is trained via sae/train.py within the development container.
+"""
+```
+
+---
+
 ## Project Structure
 
 * **Architecture:** The project is built around a modular design where the core logic for model interaction and data extraction is encapsulated in the `ActivationExtractor` class within `tools.py`. The `Interface.ipynb` notebook is the recommended interface for interactive exploration and visualization; the previously included `main.py` served as a CLI example but is now replaced with the notebook-based workflow.
@@ -89,7 +245,6 @@
 
 ## Code Writing Rules 📝
 Do not create new documentation files (unless explicitly requested). Only update documentation via the `README` if necessary.
-**This section must be added to the `AGENTS.md` file exactly as written below:**
 
 ### File Header (Mandatory)
 In the header of every code file, you **must** describe how that file relates to the **overall project architecture** and **code flow**.
